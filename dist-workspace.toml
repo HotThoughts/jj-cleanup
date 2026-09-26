@@ -13,3 +13,7 @@ installers = ["shell"]
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 # Where to host releases
 hosting = "github"
+# .github/workflows/release.yml is hand-tuned (pinned action SHAs, least-privilege permissions,
+# ubuntu-slim runners), so `dist plan` must not diff it against the generated template, and
+# `dist generate` must not overwrite it. The rest of the config is still validated by `dist plan`.
+allow-dirty = ["ci"]
