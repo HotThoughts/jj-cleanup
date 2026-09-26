@@ -143,7 +143,8 @@ jobs:
           curl --proto '=https' --tlsv1.2 -LsSf \
             https://github.com/axodotdev/cargo-dist/releases/download/v0.32.0/cargo-dist-installer.sh | sh
       # Validates dist-workspace.toml, so a broken release config fails here rather than on a tag.
-      # release.yml is hand-tuned, so `dist generate --check` no longer applies.
+      # release.yml is hand-tuned and marked `allow-dirty = ["ci"]`, so dist neither checks nor
+      # regenerates it.
       - name: Plan the release
         run: dist plan
 
