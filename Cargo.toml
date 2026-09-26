@@ -19,7 +19,7 @@ name = "jj-cleanup"
 path = "src/main.rs"
 
 [dependencies]
-anstream = "0.6"
+anstream = "1.0"
 anstyle = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
