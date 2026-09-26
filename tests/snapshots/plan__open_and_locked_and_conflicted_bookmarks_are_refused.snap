@@ -1,0 +1,10 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+Nothing to clean.
+
+skipped:
+  bookmark "broken": conflicted
+  bookmark "lock-me": locked
+  bookmark "open-one": #2 is still open

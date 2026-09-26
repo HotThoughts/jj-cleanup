@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# Cancel a superseded run of the same ref (a new push to a branch or PR).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # The jj release the integration tests run against. Keep this at or above the version floor
+  # jj-cleanup enforces (see MIN_JJ_VERSION in src/jj.rs).
+  JJ_VERSION: 0.45.1
+
+jobs:
+  # Decide whether the change touches anything CI builds or tests. This job always runs, which
+  # is what keeps the required `gate` check reported even for docs-only changes.
+  changes:
+    runs-on: ubuntu-slim
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # paths-filter diffs before..after on push events, which needs history.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            code:
+              - "src/**"
+              - "tests/**"
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - "deny.toml"
+              - "rustfmt.toml"
+              - "dist-workspace.toml"
+              - ".github/workflows/**"
+
+  test:
+    name: test (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      # The integration tests drive a real jj repository, and skip themselves when jj is missing,
+      # so install it here rather than letting them quietly do nothing.
+      - name: Install jj
+        run: |
+          set -euo pipefail
+          case "${RUNNER_OS}-${RUNNER_ARCH}" in
+            Linux-X64) target=x86_64-unknown-linux-musl ;;
+            Linux-ARM64) target=aarch64-unknown-linux-musl ;;
+            macOS-X64) target=x86_64-apple-darwin ;;
+            macOS-ARM64) target=aarch64-apple-darwin ;;
+            *) echo "no jj build published for ${RUNNER_OS}-${RUNNER_ARCH}" >&2; exit 1 ;;
+          esac
+          asset="jj-v${JJ_VERSION}-${target}"
+          curl -fsSL -o jj.tar.gz "https://github.com/jj-vcs/jj/releases/download/v${JJ_VERSION}/${asset}.tar.gz"
+          # The published tarball has no top-level directory: it unpacks ./jj, ./LICENSE, ./README.md.
+          mkdir -p jj-dist
+          tar -xzf jj.tar.gz -C jj-dist
+          sudo install -m755 jj-dist/jj /usr/local/bin/jj
+          jj --version
+
+      # jj needs a commit identity to rewrite commits, and the tool does not pass one.
+      - name: Configure a git identity
+        run: |
+          git config --global user.name "jj-cleanup CI"
+          git config --global user.email "ci@example.com"
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
+  msrv:
+    name: minimum supported Rust version
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.85
+        run: |
+          rustup toolchain install 1.85 --profile minimal
+          rustc +1.85 --version
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build
+        run: cargo +1.85 build --locked
+
+  deny:
+    name: dependencies
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      - name: Check licenses, advisories, and sources
+        run: cargo deny check
+
+  dist:
+    name: release configuration
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install cargo-dist
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/axodotdev/cargo-dist/releases/download/v0.32.0/cargo-dist-installer.sh | sh
+      # Validates dist-workspace.toml, so a broken release config fails here rather than on a tag.
+      # release.yml is hand-tuned, so `dist generate --check` no longer applies.
+      - name: Plan the release
+        run: dist plan
+
+  # The required status check: passes unless one of the jobs above actually failed. Mark this
+  # job (not the individual ones) as required, since docs-only changes legitimately skip them.
+  gate:
+    name: required
+    if: always()
+    needs: [changes, test, msrv, deny, dist]
+    runs-on: ubuntu-slim
+    steps:
+      - name: Check job results
+        shell: bash
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "job results: $results"
+          if grep -qE 'failure|cancelled' <<<"$results"; then
+            echo "a required job did not succeed" >&2
+            exit 1
+          fi

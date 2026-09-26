@@ -1,0 +1,5 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+  delete bookmark "landed" (already in trunk)

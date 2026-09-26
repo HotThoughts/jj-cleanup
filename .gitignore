@@ -1,0 +1,16 @@
+# Rust build output
+/target/
+*.rs.bk
+
+# Local Jujutsu repository state
+/.jj/
+
+# Editor and operating system files
+.DS_Store
+*.swp
+*.swo
+*~
+
+.pi/
+.claude/
+.agents/

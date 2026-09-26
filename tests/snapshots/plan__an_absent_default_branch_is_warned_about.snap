@@ -1,0 +1,11 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+Nothing to clean.
+
+skipped:
+  bookmark "feat-x": the default branch is unknown
+
+warnings:
+  Could not determine the default branch. Cleanup candidates were refused.

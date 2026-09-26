@@ -1,0 +1,8 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+  abandon 1 revision for bookmark "local-name"
+
+warnings:
+  bookmark "local-name" carries a trailer for #1, which was opened from "renamed-branch"

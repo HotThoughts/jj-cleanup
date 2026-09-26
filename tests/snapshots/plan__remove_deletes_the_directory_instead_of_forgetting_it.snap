@@ -1,0 +1,6 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+  remove workspace "ws2" and delete /repo-ws2
+  abandon 1 revision for bookmark "feat-x"

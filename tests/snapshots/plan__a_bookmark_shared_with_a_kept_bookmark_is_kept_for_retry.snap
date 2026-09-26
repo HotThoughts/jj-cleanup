@@ -1,0 +1,9 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+Nothing to clean.
+
+skipped:
+  bookmark "open-child": #2 is still open
+  bookmark "stack-base": held by another bookmark

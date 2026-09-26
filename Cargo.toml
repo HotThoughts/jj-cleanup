@@ -1,0 +1,62 @@
+[package]
+name = "jj-cleanup"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Safe cleanup of jj revisions, bookmarks, and workspaces left behind by merged or closed GitHub PRs"
+repository = "https://github.com/HotThoughts/jj-cleanup"
+readme = "README.md"
+keywords = ["jujutsu", "jj", "git", "github", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lib]
+name = "jj_cleanup"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jj-cleanup"
+path = "src/main.rs"
+
+[dependencies]
+anstream = "0.6"
+anstyle = "1"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+assert_cmd = "2"
+insta = { version = "1", features = ["json", "glob"] }
+tempfile = "3"
+
+[lints.rust]
+elided_lifetimes_in_paths = "warn"
+impl_trait_overcaptures = "warn"
+missing_unsafe_on_extern = "deny"
+unsafe_attr_outside_unsafe = "deny"
+unused_qualifications = "warn"
+
+[lints.clippy]
+alloc_instead_of_core = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+explicit_into_iter_loop = "warn"
+let_and_return = "allow"
+manual_is_variant_and = "warn"
+manual_let_else = "warn"
+redundant_clone = "warn"
+self_named_module_files = "warn"
+single_match_else = "warn"
+str_to_string = "warn"
+try_err = "warn"
+uninlined_format_args = "allow"
+unused_async = "warn"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

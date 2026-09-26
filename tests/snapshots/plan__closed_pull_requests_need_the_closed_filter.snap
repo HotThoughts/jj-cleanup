@@ -1,0 +1,8 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+Nothing to clean.
+
+skipped:
+  bookmark "closed-one": no merged PR (#3 is closed). Use --state closed to include closed PRs

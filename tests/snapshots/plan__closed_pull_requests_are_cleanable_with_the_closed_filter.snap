@@ -1,0 +1,5 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+  abandon 1 revision for bookmark "closed-one"

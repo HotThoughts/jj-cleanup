@@ -1,0 +1,13 @@
+---
+source: tests/plan.rs
+expression: render(&plan)
+---
+Nothing to clean.
+
+skipped:
+  bookmark "feat-x": checked out in a workspace
+  workspace "default": is the primary workspace
+  workspace "here": is the workspace you are in
+  workspace "dirty": has uncommitted changes
+  workspace "rootless": jj did not report its directory
+  workspace "unreadable": its working copy could not be read
